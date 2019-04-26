@@ -34,10 +34,7 @@ def get_mnist(data_dir):
     with gzip.open(path, "rb") as h:
         (x_train, y_train), (x_valid, y_valid), _ = pickle.load(h, encoding="latin-1")
 
-    return (torch.FloatTensor(x_train),
-            torch.FloatTensor(y_train),
-            torch.FloatTensor(x_valid),
-            torch.FloatTensor(y_valid))
+    return map(torch.tensor, (x_train, y_train, x_valid, y_valid))
 
 def show_random_samples(batch, rows=5, cols=5, width=None, height=None, shuffle=True):
     """Show rows * cols random samples from a batch (without labels)."""
