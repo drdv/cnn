@@ -1,3 +1,4 @@
+import logging
 import gzip
 import requests
 import pickle
@@ -6,6 +7,57 @@ import matplotlib.pyplot as plt
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+
+log = logging.getLogger(__name__)
+
+def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
+    """Train model for for a given number of epochs.
+
+    Parameters
+    -----------
+    epochs : :obj:`int`
+        Number fo epochs .
+
+    model : subclass of :obj:`nn.Module`
+        The model.
+
+    loss_func : :obj:`callable`
+        Loss function accepting two parameters: (pred, true)
+
+    opt : :obj:`torch.optim`
+        Optimization routine.
+
+    train_dl : :obj:`DataLoader`
+        Data loader for the training set.
+
+    valid_dl : :obj:`DataLoader`
+        Data loader for the validation set.
+
+    """
+    def train():
+        """Train model for one epoch."""
+        model.train()
+        for xb, yb in train_dl:
+            loss = loss_func(model(xb), yb)
+
+            loss.backward()
+            opt.step()
+            opt.zero_grad()
+
+    def evaluate():
+        """Evaluate model using the validation set."""
+        model.eval()
+        with torch.no_grad():
+            loss, n = 0, 0
+            for xb, yb in valid_dl:
+                n += len(xb)
+                loss += loss_func(model(xb), yb) * len(xb)
+
+        return loss/n
+
+    for epoch in range(epochs):
+        train()
+        log.info('epoch {}: {}'.format(epoch, evaluate()))
 
 def get_mnist(data_dir):
     """Get MNIST data.
