@@ -39,8 +39,8 @@ def get_mnist(data_dir):
             torch.FloatTensor(x_valid),
             torch.FloatTensor(y_valid))
 
-def show_random_samples(dataset, rows=5, cols=5, width=None, height=None, shuffle=True):
-    """Show rows * cols random samples."""
+def show_random_samples(batch, rows=5, cols=5, width=None, height=None, shuffle=True):
+    """Show rows * cols random samples from a batch (without labels)."""
     if width is None: width = 1.5*cols
     if height is None: height = 1.5*rows
 
@@ -50,6 +50,6 @@ def show_random_samples(dataset, rows=5, cols=5, width=None, height=None, shuffl
         axes = plt.subplots(rows, cols, figsize=(width, height))[1].flatten()
 
     # by default batch_size=1 in DataLoader
-    for ax, (x, y) in zip(axes, DataLoader(dataset, shuffle=shuffle)):
-        ax.imshow(x.reshape((28, 28)), cmap="gray")
+    for ax, x in zip(axes, DataLoader(TensorDataset(batch), shuffle=shuffle)):
+        ax.imshow(x[0].reshape(batch.shape[-2:]), cmap="gray")
         ax.axis('off')
