@@ -33,6 +33,12 @@ def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
     valid_dl : :obj:`DataLoader`
         Data loader for the validation set.
 
+    Note
+    -----
+    Using model.train() in train() and model.eval() in evaluate() changes the
+    behavior of some of the layers in the model. For example, Dropout and
+    BatchNorm should be turned off during evaluation and on during training.
+
     """
     def train():
         """Train model for one epoch."""
