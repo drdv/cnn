@@ -59,6 +59,13 @@ def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
         train()
         log.info('epoch {}: {}'.format(epoch, evaluate()))
 
+def count_parameters(model):
+    """Return the number of parameters in a model.
+
+    https://discuss.pytorch.org/t/how-do-i-check-the-number-of-parameters-of-a-model/4325/9
+    """
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 def get_mnist(data_dir):
     """Get MNIST data.
 
