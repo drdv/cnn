@@ -43,7 +43,7 @@ def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
     def train():
         """Train model for one epoch."""
         model.train()
-        for xb, yb in train_dl:
+        for batch_index, (xb, yb) in enumerate(train_dl):
             loss = loss_func(model(xb), yb)
 
             loss.backward()
