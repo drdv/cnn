@@ -1,4 +1,5 @@
 import logging
+import zipfile
 import gzip
 import requests
 import pickle
@@ -100,6 +101,31 @@ def get_mnist(data_dir):
         (x_train, y_train), (x_valid, y_valid), _ = pickle.load(h, encoding="latin-1")
 
     return map(torch.tensor, (x_train, y_train, x_valid, y_valid))
+
+def get_hymenoptera(data_dir):
+    """Get HYMENOPTERA data.
+
+    I saw it in the following tutorial:
+    https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
+
+    Parameters
+    -----------
+    data_dir : :obj:`str`
+        Diretcory where to store the dataset.
+
+    """
+    url = 'https://download.pytorch.org/tutorial/'
+    filename = "hymenoptera_data.zip"
+
+    path = Path(data_dir, filename)
+
+    if not path.exists():
+        r = requests.get(url + filename)
+        with open(path, 'wb') as h:
+            h.write(r.content)
+
+    with zipfile.ZipFile(path, "r") as h:
+        h.extractall(data_dir)
 
 def show_random_samples(batch, rows=5, cols=5, width=None, height=None, shuffle=True):
     """Show rows * cols random samples from a batch (without labels)."""
