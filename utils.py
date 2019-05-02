@@ -11,6 +11,17 @@ from torch.utils.data import TensorDataset, DataLoader
 
 log = logging.getLogger(__name__)
 
+class CustomSizeDataLoader:
+    """Preprocess batches ina dataloader."""
+    def __init__(self, dl, func):
+        self.dl, self.func = dl, func
+
+    def __len__(self):
+        return len(self.dl)
+
+    def __iter__(self):
+        for b in self.dl: yield (self.func(*b))
+
 def fit(epochs, model, loss_func, opt, train_dl, valid_dl):
     """Train model for for a given number of epochs.
 
