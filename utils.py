@@ -11,8 +11,8 @@ from torch.utils.data import TensorDataset, DataLoader
 
 log = logging.getLogger(__name__)
 
-class CustomSizeDataLoader:
-    """Preprocess batches ina dataloader."""
+class CustomDataLoader:
+    """Preprocess batches in a dataloader."""
     def __init__(self, dl, func):
         self.dl, self.func = dl, func
 
