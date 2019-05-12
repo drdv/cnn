@@ -4,10 +4,16 @@ import gzip
 import requests
 import pickle
 from pathlib import Path
+import numpy as np
+
 import matplotlib.pyplot as plt
 
 import torch
 from torch.utils.data import TensorDataset, DataLoader
+from torch import optim
+
+# see as well: LambdaLR, StepLR, ReduceLROnPlateau, MultiStepLR, ExponentialLR
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 log = logging.getLogger(__name__)
 
@@ -152,3 +158,126 @@ def show_random_samples(batch, rows=5, cols=5, width=None, height=None, shuffle=
     for ax, x in zip(axes, DataLoader(TensorDataset(batch), shuffle=shuffle)):
         ax.imshow(x[0].reshape(batch.shape[-2:]), cmap="gray")
         ax.axis('off')
+
+def rosenbrock(x):
+    """Rosenbrock function."""
+    return (1-x[0])**2 + 100*(x[1] - x[0]**2)**2
+
+def rosenbrock_contour(iterates=None, **kwargs):
+    """Plot contours of the Rosenbrock function."""
+    n = 250
+    X, Y = np.meshgrid(np.linspace(-2,2,n),
+                       np.linspace(-1,3,n))
+    fig = plt.figure(figsize=(14,8))
+    plt.contour(X, Y, rosenbrock([X,Y]), np.logspace(-0.5, 3.5, 20, base=10), cmap='gray')
+
+    if iterates is not None:
+        if isinstance(iterates, dict):
+            for key, value in iterates.items():
+                plt.plot(*(zip(*value['iterates'])),
+                         ls='--', marker='o',
+                         label='lr: {}'.format(key))
+        else:
+            plt.plot(*(zip(*iterates)), 'bo--')
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+    if isinstance(iterates, dict): plt.legend()
+
+    if 'lr_history' in kwargs and kwargs['lr_history']:
+        plt.figure(figsize=(13,8))
+        plt.plot(kwargs['lr_history'])
+        plt.xlabel('iter')
+        plt.ylabel('learning rate')
+        plt.title('Cosine annealing')
+        plt.grid(True)
+
+def gd(x0, lr=1e-3, mu=0.0, nesterov=False,
+       use_torch_opt=False, schedule_lr=False,
+       N=500, model=rosenbrock, **kwargs):
+    """Gradient descent.
+
+    Parameters
+    -----------
+    x0 : :obj:`numpy.array`
+        Initial iterate.
+
+    lr : :obj:`float`
+        Learning rate.
+
+    mu : :obj:`float` [0, 1)
+        Momentum, see [1] (1-2).
+
+    nesterov : :obj:`bool`
+        If `True` use Nesterov accelerated gradient,
+        see [1] (3-4).
+
+    use_torch_opt : :obj:`bool`
+        If `True` use torch.optim.SGD. Note that there are
+        slight differences in the interpretation of the
+        `lr` and `mu` parameters (see the documentation of optim.SGD),
+        hence the results would be different from the manual version.
+
+    schedule_lr : :obj:`bool`
+        Use scheduler for the learning rate
+        (used only when use_torch_opt=`True`).
+
+    N : :obj:`int`
+        Number of iterations.
+
+    model : :obj:`callable`
+        The model.
+
+    References
+    -----------
+    [1] http://proceedings.mlr.press/v28/sutskever13.pdf
+
+    Returns
+    --------
+    :obj:`list(numpy.array)`
+        The iterates.
+    """
+    if schedule_lr and not use_torch_opt: use_torch_opt = True
+
+    x = torch.tensor(x0, requires_grad=True)
+
+    lr_history = []
+    opt = None
+    if use_torch_opt:
+        opt = optim.SGD([x], lr=lr, momentum=mu, nesterov=nesterov)
+
+        if schedule_lr:
+            if 'T_max' in kwargs: T_max = kwargs['T_max']
+            else: T_max = N//5
+
+            if 'eta_min' in kwargs: eta_min = kwargs['eta_min']
+            else: eta_min = lr//3
+
+            scheduler = CosineAnnealingLR(opt, T_max, eta_min)
+
+    iterates = [x.clone().data.numpy()]
+    v = torch.zeros(len(x)).double()
+    for k in range(N):
+        if schedule_lr:
+            scheduler.step()
+            lr_history.append(opt.param_groups[0]['lr'])
+
+        if opt is None:  # perform step manually
+            if nesterov: y = model(x + mu * v)
+            else: y = model(x)
+
+            y.backward()
+            with torch.no_grad():
+                v = mu * v - lr * x.grad
+                x += v
+                x.grad.zero_()
+        else:
+            y = model(x)
+            y.backward()
+            opt.step()
+            opt.zero_grad()
+
+        iterates.append(x.clone().data.numpy())
+
+    return {'iterates': iterates,
+            'lr_history': lr_history}
